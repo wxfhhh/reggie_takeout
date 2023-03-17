@@ -1,4 +1,5 @@
 package com.reggie.controller;
+import com.alibaba.fastjson.JSON;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.reggie.common.Result;
@@ -12,11 +13,14 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.Serializable;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @RestController
@@ -29,6 +33,8 @@ public class DishController {
     private DishFlavorService dishFlavorService;
     @Autowired
     private CategoryService categoryService;
+    @Autowired
+    private StringRedisTemplate redisTemplate;
 
     @PostMapping
     public Result add(@RequestBody DishDto dishdto){
@@ -99,6 +105,12 @@ public class DishController {
     public Result update(@RequestBody DishDto dishDto){
         dishService.updateById(dishDto);
         dishFlavorService.updateBatchById(dishDto.getFlavors());
+//        //删除菜品缓存的数据
+//        Set<String> keys = redisTemplate.keys("dish_*");
+//        redisTemplate.delete(keys);
+        //可以清理一部分菜品
+        String s = redisTemplate.opsForValue().get("dish_" + dishDto.getCategoryId() + "_1");
+        redisTemplate.delete(s);
         return Result.succeed("修改成功!");
     }
 
@@ -137,6 +149,15 @@ public class DishController {
 //    }
     @GetMapping("list")
     public Result category(Dish dish){
+        //动态构造key
+        String key="dish_"+dish.getCategoryId()+"_"+dish.getStatus();
+        //从redis中获取缓存数据
+        String s = redisTemplate.opsForValue().get(key);
+        //不为空
+        if(s!=null){
+            return Result.succeed(s);
+        }
+        //为空
         //根据菜品分类来查询所含菜品 要为出售状态
         LambdaQueryWrapper<Dish> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(Dish::getStatus,1);
@@ -155,6 +176,9 @@ public class DishController {
             }
             return dishDto;
         }).collect(Collectors.toList());
+        //不存在缓存直接将查询到的数据存入redis中
+        String s1 = JSON.toJSONString(dishDtos);
+        redisTemplate.opsForValue().set(key,s1,60, TimeUnit.MINUTES);
         //将Dto数据返回给前端
         return Result.succeed(dishDtos);
     }

@@ -18,5 +18,18 @@ mybatis-plus:
   global-config:
     db-config:
       id-type: ASSIGN_ID
+  redis:
+    host: localhost
+    port: 6379
+    password: 8484229
+    database: 0
+    #password:
+    jedis:
+      pool:
+        #redis的连接池配置
+        max-active: 8 #最大连接数
+        max-wait: 1ms #最大堵塞时间
+        max-idle: 4 #最大空闲连接
+        min-idle: 0 #最小空闲连接
 file:
   path: E:\msg\

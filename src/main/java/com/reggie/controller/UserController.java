@@ -8,6 +8,7 @@ import com.reggie.utils.SMSUtils;
 import com.reggie.utils.ValidateCodeUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 @RestController
 @Slf4j
@@ -23,6 +25,8 @@ import java.util.Map;
 public class UserController {
     @Autowired
     private UserService userService;
+    @Autowired
+    private StringRedisTemplate redisTemplate;
     /**
      * 根据手机号生成验证码,发送给手机
      * @return
@@ -37,7 +41,8 @@ public class UserController {
             //发送验证码到手机
 //            SMSUtils.sendMessage("reggie","您的验证码为：${code}，请勿泄露于他人！",phone,code);
             //将验证码存入session中
-            session.setAttribute("phone",code);
+            //session.setAttribute("phone",code);
+            redisTemplate.opsForValue().set("phone",code,5, TimeUnit.MINUTES);
             return Result.succeed("短信发送成功!");
         }
         return Result.Error("短信发送失败!");
@@ -50,7 +55,8 @@ public class UserController {
         String code = users.get("code").toString();
         log.info("phone={},code={}",phone,code);
         //code和session中保留的code进行比较
-        Object code1 = session.getAttribute("phone");
+        //Object code1 = session.getAttribute("phone");
+        String code1 = redisTemplate.opsForValue().get("phone");
         if(code!=null && code1.equals(code)){
             //比对成功 ,登录成功
             //判断此手机号是否已经注册
@@ -66,6 +72,8 @@ public class UserController {
                 userService.save(user);
             }
             session.setAttribute("user",user.getId());
+            //登录成功,删除redis缓存的phone
+            redisTemplate.delete("phone");
             return Result.succeed(user);
         }
         return Result.Error("登录失败!");
