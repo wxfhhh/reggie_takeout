@@ -1,6 +1,8 @@
 package com.reggie.common;
 
-public class Result {
+import java.io.Serializable;
+
+public class Result implements Serializable {
     private Integer code;//1成功 其他表示失败
     private String msg;//失败信息
     private Object data;

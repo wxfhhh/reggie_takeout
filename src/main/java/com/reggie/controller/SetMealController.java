@@ -15,6 +15,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.LinkedList;
@@ -68,6 +71,7 @@ public class SetMealController {
      * @param setMealDto
      * @return
      */
+    @CacheEvict(value="setMeal",allEntries = true)
     @PostMapping()
     public Result add(@RequestBody SetMealDto setMealDto){
         log.info("增加套餐");
@@ -81,6 +85,7 @@ public class SetMealController {
      * @param ids
      * @return
      */
+    @CacheEvict(value="setMeal",allEntries = true)
     @PostMapping("status/{status}")
     public Result update_s(@PathVariable int status,@RequestParam List<Long> ids){
 //        Setmeal setmeal=setMealService.getById(ids);
@@ -97,6 +102,8 @@ public class SetMealController {
      * @param ids
      * @return
      */
+    @CacheEvict(value="setMeal",allEntries = true)
+    //删除缓存
     @DeleteMapping
     public Result delete(@RequestParam LinkedList<Long> ids){
         setMealService.deleteWithDish(ids);
@@ -108,6 +115,7 @@ public class SetMealController {
      * @param setMeal
      * @return
      */
+    @Cacheable(value="setMeal",key="#setMeal.categoryId+'_'+#setMeal.status")
     @GetMapping("list")
     public Result list(Setmeal setMeal){
         LambdaQueryWrapper<Setmeal> queryWrapper = new LambdaQueryWrapper<>();

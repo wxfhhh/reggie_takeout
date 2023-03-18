@@ -155,7 +155,7 @@ public class DishController {
         String s = redisTemplate.opsForValue().get(key);
         //不为空
         if(s!=null){
-            return Result.succeed(s);
+            return Result.succeed(JSON.parse(s));
         }
         //为空
         //根据菜品分类来查询所含菜品 要为出售状态
